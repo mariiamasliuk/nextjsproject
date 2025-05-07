@@ -16,12 +16,12 @@ export async function fetchRevenue() {
     // Artificially delay a response for demo purposes.
     // Don't do this in production :)
 
-    // console.log('Fetching revenue data...');
-    // await new Promise((resolve) => setTimeout(resolve, 3000));
+    console.log('Fetching revenue data...');
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const data = await sql<Revenue[]>`SELECT * FROM revenue`;
 
-    // console.log('Data fetch completed after 3 seconds.');
+    console.log('Data fetch completed after 3 seconds.');
 
     return data;
   } catch (error) {
@@ -215,4 +215,63 @@ export async function fetchFilteredCustomers(query: string) {
     console.error('Database Error:', err);
     throw new Error('Failed to fetch customer table.');
   }
+}
+
+export const invoiceCountPromise = async(status:string='') => {
+  try {
+    let data = [{count: ''}];
+    if (status!==''){
+      data = await sql`SELECT COUNT(*) FROM invoices where status=${status}`;
+      }
+    else{
+      data = await sql`SELECT COUNT(*) FROM invoices`;
+    }
+    return data[0].count;
+  } catch (err) {
+    console.error('Database Error:', err);
+    throw new Error('Failed to fetch customer table.');
+  }
+}
+
+export const invoiceAmountPromise = async() => {
+  try {
+    const data = await sql`SELECT SUM(amount) as amount FROM invoices`;
+    return data[0].amount;
+  } catch (err) {
+    console.error('Database Error:', err);
+    throw new Error('Failed to fetch customer table.');
+  }
+}
+
+export const customerCountPromise = async() => {
+  try {
+    const data = await sql`SELECT count(*) as count FROM customers`;
+    return data[0].count;
+  } catch (err) {
+    console.error('Database Error:', err);
+    throw new Error('Failed to fetch customer table.');
+  }
+}
+
+export async function fetchCardsData() {
+  try {
+    const invoiceCountPromise = sql`SELECT COUNT(*) FROM invoices`;
+    const customerCountPromise = sql`SELECT COUNT(*) FROM customers`;
+    const invoiceStatusPromise = sql`SELECT
+         SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
+         SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
+         FROM invoices`;
+ 
+    const data = await Promise.all([
+      invoiceCountPromise,
+      customerCountPromise,
+      invoiceStatusPromise,
+    ]);
+    return data;
+  }
+ catch (err) {
+  console.error('Database Error:', err);
+  throw new Error('Failed to fetch customer table.');
+}
+
 }
